@@ -1,0 +1,56 @@
+import network
+from machine import Pin, I2C
+from bme280 import BME280
+from anemometer import Anemometer
+import urequests as requests
+import ujson as json
+import time
+
+# Configurações WiFi
+WIFI_SSID = "sua_rede"
+WIFI_PASS = "sua_senha"
+
+# Configurações IoT
+API_ENDPOINT = "https://seu-servidor.com/api/data"
+
+# Inicialização dos sensores
+i2c = I2C(scl=Pin(22), sda=Pin(21))
+bme = BME280(i2c=i2c)
+anem = Anemometer(pin=34)
+
+def connect_wifi():
+    sta_if = network.WLAN(network.STA_IF)
+    if not sta_if.isconnected():
+        sta_if.active(True)
+        sta_if.connect(WIFI_SSID, WIFI_PASS)
+        while not sta_if.isconnected():
+            pass
+    print("IP:", sta_if.ifconfig()[0])
+
+def read_sensors():
+    return {
+        "temp": bme.temperature,
+        "humidity": bme.humidity,
+        "pressure": bme.pressure,
+        "wind_speed": anem.speed,
+        "wind_dir": anem.direction
+    }
+
+def send_data(data):
+    try:
+        headers = {'Content-Type': 'application/json'}
+        response = requests.post(
+            API_ENDPOINT,
+            data=json.dumps(data),
+            headers=headers
+        )
+        return response.status_code == 200
+    except:
+        return False
+
+while True:
+    connect_wifi()
+    sensor_data = read_sensors()
+    if send_data(sensor_data):
+        print("Dados enviados:", sensor_data)
+    time.sleep(300)  # Envia a cada 5 minutos
