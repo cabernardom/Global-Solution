@@ -1,0 +1,18 @@
+# Exemplo de código para detecção de anomalias no ESP32
+from micropython_ml.tinyrandomforest import TinyRandomForest
+import sensors
+
+# Modelo pré-treinado (exportado para C)
+model = TinyRandomForest.load('anomaly_detection.bin')
+
+def check_emergency():
+    data = {
+        'wind_speed': sensors.anemometer.read(),
+        'pressure': sensors.barometer.read(),
+        'rainfall': sensors.pluviometer.read_last_hour()
+    }
+    prediction = model.predict(data)
+    
+    if prediction == 'storm_alert':
+        lora.send_emergency_signal()
+
